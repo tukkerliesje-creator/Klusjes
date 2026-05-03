@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Klusjeslijst</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf7f2;
+    --card: #ffffff;
+    --ink: #1a1208;
+    --muted: #8a7f72;
+    --accent1: #e8572a;
+    --accent2: #f0b429;
+    --accent3: #2d9e6b;
+    --border: #e8e0d4;
+    --done-bg: #f0faf5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  header {
+    background: var(--ink);
+    color: white;
+    padding: 28px 24px 22px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.2);
+  }
+
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: #aaa;
+    margin-top: 4px;
+  }
+
+  .sync-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #555;
+    transition: background 0.3s;
+  }
+
+  .sync-dot.live { background: var(--accent3); box-shadow: 0 0 6px var(--accent3); }
+  .sync-dot.syncing { background: var(--accent2); animation: pulse 0.8s infinite; }
+  .sync-dot.error { background: var(--accent1); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .score-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .score-pill {
+    background: rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .score-pill .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .progress-outer {
+    background: rgba(255,255,255,0.15);
+    border-radius: 100px;
+    height: 5px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+
+  .progress-inner {
+    height: 100%;
+    background: var(--accent3);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+  }
+
+  main {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+
+  .add-form {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 18px;
+    border: 1.5px solid var(--border);
+    margin-bottom: 20px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  }
+
+  .add-form h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  input[type="text"], select {
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus, select:focus { border-color: var(--accent1); }
+  input[type="text"] { flex: 1; }
+  select { width: 150px; flex-shrink: 0; }
+
+  .btn {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary { background: var(--accent1); color: white; }
+  .btn-primary:hover { background: #c94520; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-full { width: 100%; }
+
+  .manage-persons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .manage-persons input[type="text"] { flex: 1; min-width: 120px; }
+
+  .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .person-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: white;
+    border-radius: 100px;
+    padding: 4px 10px 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+
+  .person-tag button {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+    transition: color 0.1s;
+  }
+
+  .person-tag button:hover { color: white; }
+
+  .filter-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .filter-btn {
+    border: 1.5px solid var(--border);
+    background: white;
+    border-radius: 100px;
+    padding: 5px 14px;
+    font-size: 0.8rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  .filter-btn.active {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+
+  .klus-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.25s;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+  }
+
+  .klus-card.done {
+    background: var(--done-bg);
+    border-color: #b8e8d0;
+    opacity: 0.7;
+  }
+
+  .klus-card.done .klus-title {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+
+  .check-circle {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+    user-select: none;
+  }
+
+  .check-circle:hover { border-color: var(--accent3); background: #e8faf2; }
+  .check-circle.checked { background: var(--accent3); border-color: var(--accent3); color: white; }
+
+  .klus-info { flex: 1; min-width: 0; }
+
+  .klus-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .klus-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .person-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 100px;
+    color: white;
+  }
+
+  .delete-btn {
+    background: none;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px;
+    transition: color 0.15s;
+    flex-shrink: 0;
+  }
+
+  .delete-btn:hover { color: var(--accent1); }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .empty-state .emoji { font-size: 2.5rem; margin-bottom: 10px; }
+
+  .loading {
+    text-align: center;
+    padding: 30px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 420px) {
+    header h1 { font-size: 1.6rem; }
+    .form-row { flex-direction: column; }
+    select { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧹 Klusjeslijst</h1>
+  <div class="sync-indicator">
+    <span class="sync-dot" id="syncDot"></span>
+    <span id="syncText">Verbinden…</span>
+  </div>
+  <div class="score-bar" id="scoreBar"></div>
+  <div class="progress-outer"><div class="progress-inner" id="progressBar" style="width:0%"></div></div>
+</header>
+
+<main>
+  <div class="add-form">
+    <h2>👤 Tieners</h2>
+    <div class="manage-persons">
+      <input type="text" id="personInput" placeholder="Naam tiener…" maxlength="20">
+      <button class="btn btn-primary" onclick="addPerson()">+ Voeg toe</button>
+    </div>
+    <div class="tags-list" id="personTags"></div>
+  </div>
+
+  <div class="add-form">
+    <h2>➕ Nieuw klusje</h2>
+    <div class="form-row">
+      <input type="text" id="klusInput" placeholder="Bijv. stofzuigen, afwassen…" maxlength="60">
+      <select id="personSelect"><option value="">— Iedereen —</option></select>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="addKlus()">Klusje toevoegen</button>
+  </div>
+
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-btn active" onclick="setFilter('all',this)">Alles</button>
+    <button class="filter-btn" onclick="setFilter('open',this)">Open</button>
+    <button class="filter-btn" onclick="setFilter('done',this)">Gedaan ✓</button>
+  </div>
+
+  <div id="klussenList"><div class="loading">⏳ Even laden…</div></div>
+</main>
+
+<script>
+  const SUPABASE_URL = 'https://pomxktlfiwqevvgeusxp.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvbXhrdGxmaXdxZXZ2Z2V1c3hwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NTc3OTgsImV4cCI6MjA5MjQzMzc5OH0.qRQto7_vwKtZK-fohg6GQ_k_9Q2fpygu3tlgS9fjH0g';
+  const COLORS = ['#e8572a','#2d9e6b','#c9456b','#2d7be8','#b06ad4','#e89a2a','#1aadad'];
+
+  let persons = [];
+  let klussen = [];
+  let currentFilter = 'all';
+
+  function personColor(name) {
+    let hash = 0;
+    for (let c of name) hash = (hash * 31 + c.charCodeAt(0)) % COLORS.length;
+    return COLORS[hash];
+  }
+
+  function setSyncState(state) {
+    const dot = document.getElementById('syncDot');
+    const txt = document.getElementById('syncText');
+    dot.className = 'sync-dot ' + state;
+    txt.textContent = state === 'live' ? 'Live gesynchroniseerd' : state === 'syncing' ? 'Bezig…' : 'Verbindingsfout';
+  }
+
+  async function apiFetch(path, method = 'GET', body = null) {
+    const url = `${SUPABASE_URL}/rest/v1/${path}`;
+    const opts = {
+      method,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+      }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(await res.text());
+    if (res.status === 204 || method === 'DELETE' || method === 'PATCH') return null;
+    return res.json();
+  }
+
+  async function loadAll() {
+    try {
+      const [p, k] = await Promise.all([
+        apiFetch('klusjes_persons?select=*&order=created_at.asc'),
+        apiFetch('klusjes?select=*&order=created_at.asc')
+      ]);
+      persons = p.map(r => r.name);
+      klussen = k;
+      setSyncState('live');
+      renderPersons();
+      renderKlussen();
+    } catch(e) {
+      setSyncState('error');
+    }
+  }
+
+  async function addPerson() {
+    const input = document.getElementById('personInput');
+    const name = input.value.trim();
+    if (!name || persons.includes(name)) { input.focus(); return; }
+    setSyncState('syncing');
+    try {
+      await apiFetch('klusjes_persons', 'POST', { name });
+      input.value = '';
+      await loadAll();
+    } catch(e) { setSyncState('error'); }
+  }
+
+  async function removePerson(name) {
+    if (!confirm(`${name} verwijderen?`)) return;
+    setSyncState('syncing');
+    try {
+      const ids = klussen.filter(k => k.person === name).map(k => k.id);
+      for (const id of ids) {
+        await apiFetch(`klusjes?id=eq.${id}`, 'PATCH', { person: '' });
+      }
+      await apiFetch(`klusjes_persons?name=eq.${encodeURIComponent(name)}`, 'DELETE');
+      await loadAll();
+    } catch(e) { setSyncState('error'); }
+  }
+
+  async function addKlus() {
+    const input = document.getElementById('klusInput');
+    const title = input.value.trim();
+    if (!title) { input.focus(); return; }
+    const person = document.getElementById('personSelect').value;
+    setSyncState('syncing');
+    try {
+      await apiFetch('klusjes', 'POST', { title, person, done: false });
+      input.value = '';
+      await loadAll();
+    } catch(e) { setSyncState('error'); }
+  }
+
+  async function toggleKlus(id) {
+    const klus = klussen.find(k => k.id === id);
+    if (!klus) return;
+    klus.done = !klus.done;
+    renderKlussen();
+    setSyncState('syncing');
+    try {
+      await apiFetch(`klusjes?id=eq.${id}`, 'PATCH', { done: klus.done });
+      setSyncState('live');
+    } catch(e) {
+      klus.done = !klus.done;
+      renderKlussen();
+      setSyncState('error');
+    }
+  }
+
+  async function deleteKlus(id) {
+    setSyncState('syncing');
+    try {
+      await apiFetch(`klusjes?id=eq.${id}`, 'DELETE');
+      await loadAll();
+    } catch(e) { setSyncState('error'); }
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderKlussen();
+  }
+
+  function renderPersons() {
+    const tags = document.getElementById('personTags');
+    const sel = document.getElementById('personSelect');
+    tags.innerHTML = persons.map(p =>
+      `<span class="person-tag" style="background:${personColor(p)}">
+        ${p} <button onclick="removePerson('${p}')">✕</button>
+      </span>`
+    ).join('');
+    sel.innerHTML = '<option value="">— Iedereen —</option>' +
+      persons.map(p => `<option value="${p}">${p}</option>`).join('');
+
+    const bar = document.getElementById('filterBar');
+    Array.from(bar.children).slice(3).forEach(b => b.remove());
+    persons.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn' + (currentFilter === 'person:' + p ? ' active' : '');
+      btn.textContent = p;
+      btn.onclick = function() { setFilter('person:' + p, btn); };
+      bar.appendChild(btn);
+    });
+  }
+
+  function renderKlussen() {
+    const list = document.getElementById('klussenList');
+    let filtered = klussen;
+    if (currentFilter === 'open') filtered = klussen.filter(k => !k.done);
+    else if (currentFilter === 'done') filtered = klussen.filter(k => k.done);
+    else if (currentFilter.startsWith('person:')) {
+      const p = currentFilter.slice(7);
+      filtered = klussen.filter(k => k.person === p);
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="emoji">${currentFilter === 'done' ? '📭' : '🎉'}</div>
+        ${currentFilter === 'done' ? 'Nog niets afgevinkt.' : 'Geen klusjes hier!'}</div>`;
+    } else {
+      list.innerHTML = filtered.map(k => {
+        const color = k.person ? personColor(k.person) : '#aaa';
+        const badge = k.person
+          ? `<span class="person-badge" style="background:${color}">${k.person}</span>`
+          : `<span style="font-size:0.75rem;color:var(--muted)">iedereen</span>`;
+        return `<div class="klus-card ${k.done ? 'done' : ''}">
+          <div class="check-circle ${k.done ? 'checked' : ''}" onclick="toggleKlus(${k.id})">
+            ${k.done ? '✓' : ''}
+          </div>
+          <div class="klus-info">
+            <div class="klus-title">${k.title}</div>
+            <div class="klus-meta">${badge}</div>
+          </div>
+          <button class="delete-btn" onclick="deleteKlus(${k.id})">🗑</button>
+        </div>`;
+      }).join('');
+    }
+
+    const total = klussen.length;
+    const done = klussen.filter(k => k.done).length;
+    const pct = total ? Math.round(done / total * 100) : 0;
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('scoreBar').innerHTML =
+      persons.map(p => {
+        const pt = klussen.filter(k => k.person === p).length;
+        const pd = klussen.filter(k => k.person === p && k.done).length;
+        return `<span class="score-pill"><span class="dot" style="background:${personColor(p)}"></span>${p}: ${pd}/${pt}</span>`;
+      }).join('') +
+      `<span class="score-pill">Totaal: ${done}/${total} (${pct}%)</span>`;
+  }
+
+  document.getElementById('personInput').addEventListener('keydown', e => { if (e.key === 'Enter') addPerson(); });
+  document.getElementById('klusInput').addEventListener('keydown', e => { if (e.key === 'Enter') addKlus(); });
+
+  loadAll();
+  setInterval(loadAll, 5000);
+</script>
+</body>
+</html>
